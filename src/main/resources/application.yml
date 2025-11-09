@@ -1,0 +1,135 @@
+spring:
+  application:
+    name: youtube-live-streaming
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/lstream
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+
+  redis:
+    host: localhost
+    port: 6379
+    password:
+    jedis:
+      pool:
+        max-active: 50
+        max-idle: 20
+        min-idle: 5
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      group-id: lstream-consumer-group
+      auto-offset-reset: earliest
+      properties:
+        spring.json.trusted.packages: "*"
+
+server:
+  port: 8080
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+  http2:
+    enabled: true
+
+# Application Configuration
+app:
+  streaming:
+    rtmp-port: 1935
+    hls-segment-duration: 6
+    hls-playlist-length: 5
+    stream-base-path: /var/streaming
+    recordings-path: /var/recordings
+    max-bitrate: 6000
+    qualities:
+      - name: 1080p
+        width: 1920
+        height: 1080
+        bitrate: 5000
+      - name: 720p
+        width: 1280
+        height: 720
+        bitrate: 2800
+      - name: 480p
+        width: 854
+        height: 480
+        bitrate: 1400
+      - name: 360p
+        width: 640
+        height: 360
+        bitrate: 800
+
+  jwt:
+    secret: ${JWT_SECRET:your-256-bit-secret-key-change-this-in-production-environment}
+    expiration: 86400000  # 24 hours in milliseconds
+    refresh-expiration: 604800000  # 7 days
+
+  storage:
+    type: local  # local, s3, minio
+    s3:
+      bucket: lstream-recordings
+      region: us-east-1
+      access-key: ${AWS_ACCESS_KEY:}
+      secret-key: ${AWS_SECRET_KEY:}
+    local:
+      base-path: /var/lstream
+
+  chat:
+    max-message-length: 500
+    rate-limit: 5  # messages per second per user
+
+  cdn:
+    enabled: false
+    base-url: https://cdn.example.com
+
+# Actuator endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.lstream: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/lstream.log
